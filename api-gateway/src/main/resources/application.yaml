@@ -6,23 +6,25 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      routes:
-        - id: users-service
-          uri: lb://users-service
-          predicates:
-            - Path=/users/**
-        - id: auth-service
-          uri: lb://auth-service
-          predicates:
-            - Path=/auth/**
-        - id: account-service
-          uri: lb://account-service
-          predicates:
-            - Path=/accounts/**
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+              lower-case-service-id: true
+          routes:
+            - id: users-service
+              uri: lb://users-service
+              predicates:
+                - Path=/users/**
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/auth/**
+            - id: account-service
+              uri: lb://account-service
+              predicates:
+                - Path=/accounts/**
   security:
     oauth2:
       resourceserver:
