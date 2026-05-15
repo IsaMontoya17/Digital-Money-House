@@ -35,6 +35,9 @@ public class AuthService {
     @Value("${spring.security.oauth2.client.registration.keycloak.client-secret}")
     private String clientSecret;
 
+    @Value("${spring.security.oauth2.client.provider.keycloak.issuer-uri}")
+    private String keycloakIssuerUri;
+
     public LoginResponseDTO login(LoginRequestDTO request) {
 
         User user = userRepository.findByEmail(request.getEmail())
@@ -76,7 +79,26 @@ public class AuthService {
     }
 
     public void logout(String token) {
-        // Con Keycloak, el logout se maneja invalidando el token en el frontend
-        // Opcionalmente se puede llamar al endpoint de logout de Keycloak
+        RestTemplate restTemplate = new RestTemplate();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.set("Authorization", token);
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("client_id", clientId);
+        body.add("client_secret", clientSecret);
+
+        // Extraer el refresh_token no es posible solo con el access_token,
+        // así que invalidamos la sesión via el endpoint de logout de Keycloak
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
+
+        try {
+            String logoutUrl = keycloakIssuerUri + "/protocol/openid-connect/logout";
+            restTemplate.postForEntity(logoutUrl, entity, String.class);
+        } catch (Exception e) {
+            // Si falla el logout en Keycloak, igual respondemos OK
+            // El token expirará naturalmente en 5 minutos
+        }
     }
 }
