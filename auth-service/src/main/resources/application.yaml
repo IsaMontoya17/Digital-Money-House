@@ -4,6 +4,15 @@ server:
 spring:
   application:
     name: auth-service
+  datasource:
+    url: jdbc:mysql://localhost:3307/digital_money_house
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
   security:
     oauth2:
       client:
