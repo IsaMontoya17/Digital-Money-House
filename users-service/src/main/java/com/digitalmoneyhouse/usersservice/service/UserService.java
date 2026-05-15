@@ -3,14 +3,19 @@ package com.digitalmoneyhouse.usersservice.service;
 import com.digitalmoneyhouse.usersservice.dto.RegisterRequestDTO;
 import com.digitalmoneyhouse.usersservice.dto.RegisterResponseDTO;
 import com.digitalmoneyhouse.usersservice.model.Account;
+import com.digitalmoneyhouse.usersservice.model.Role;
+import com.digitalmoneyhouse.usersservice.model.RoleName;
 import com.digitalmoneyhouse.usersservice.model.User;
 import com.digitalmoneyhouse.usersservice.repository.AccountRepository;
+import com.digitalmoneyhouse.usersservice.repository.RoleRepository;
 import com.digitalmoneyhouse.usersservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
     public RegisterResponseDTO registerUser(RegisterRequestDTO request) {
@@ -30,6 +36,11 @@ public class UserService {
             throw new IllegalArgumentException("El DNI ya está registrado");
         }
 
+        Role userRole = roleRepository.findByName(RoleName.ROLE_USER)
+                .orElseGet(() -> roleRepository.save(
+                        Role.builder().name(RoleName.ROLE_USER).build()
+                ));
+
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -37,6 +48,7 @@ public class UserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .dni(request.getDni())
                 .phone(request.getPhone())
+                .roles(new HashSet<>(Set.of(userRole)))
                 .build();
 
         User savedUser = userRepository.save(user);
