@@ -1,0 +1,16 @@
+# Variables de entorno
+.env
+
+# Maven
+**/target/
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+
+# IDE
+**/.idea/
+**/*.iml
+**/.vscode/
+
+# Logs
+**/*.log
