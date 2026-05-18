@@ -25,6 +25,7 @@ public class UserService {
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final KeycloakService keycloakService;
 
     public RegisterResponseDTO registerUser(RegisterRequestDTO request) {
 
@@ -52,6 +53,13 @@ public class UserService {
                 .build();
 
         User savedUser = userRepository.save(user);
+
+        keycloakService.createUser(
+                request.getEmail(),
+                request.getPassword(),
+                request.getFirstName(),
+                request.getLastName()
+        );
 
         Account account = Account.builder()
                 .cvu(generateUniqueCvu())
