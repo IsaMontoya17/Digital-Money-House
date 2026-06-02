@@ -25,7 +25,7 @@ DB_USERNAME=dmh_user
 DB_PASSWORD=dmh1234
 KEYCLOAK_ADMIN=admin
 KEYCLOAK_ADMIN_PASSWORD=admin1234
-KEYCLOAK_CLIENT_SECRET=tu_secret_aqui
+KEYCLOAK_CLIENT_SECRET=misuperclave123
 ```
 
 ### 3. Levantar MySQL y Keycloak
@@ -33,18 +33,7 @@ KEYCLOAK_CLIENT_SECRET=tu_secret_aqui
 docker-compose up -d
 ```
 
-### 4. Configurar Keycloak
-1. Ir a http://localhost:8082
-2. Login con admin / admin1234
-3. Crear Realm: `digital-money-house`
-4. Crear Client: `digital-money-house-client`
-    - Client authentication: ON
-    - Direct access grants: ON
-    - Valid redirect URIs: http://localhost:8080/*
-5. En Service accounts roles → Assign role → `realm-management realm-admin`
-6. Copiar el Client Secret y pegarlo en el `.env`
-
-### 5. Levantar los microservicios
+### 4. Levantar los microservicios
 Correr en este orden desde IntelliJ:
 1. `eureka-server`
 2. `api-gateway`
