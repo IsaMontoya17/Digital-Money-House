@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "accounts")
@@ -23,6 +24,10 @@ public class Account {
 
     @Column(nullable = false, unique = true)
     private String alias;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal balance = BigDecimal.ZERO;
 
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
