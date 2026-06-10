@@ -1,5 +1,6 @@
 package com.digitalmoneyhouse.accountservice.service;
 
+import com.digitalmoneyhouse.accountservice.dto.AccountBalanceDTO;
 import com.digitalmoneyhouse.accountservice.dto.AccountResponseDTO;
 import com.digitalmoneyhouse.accountservice.dto.TransactionResponseDTO;
 import com.digitalmoneyhouse.accountservice.exception.ResourceNotFoundException;
@@ -9,6 +10,7 @@ import com.digitalmoneyhouse.accountservice.repository.AccountRepository;
 import com.digitalmoneyhouse.accountservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,28 +21,10 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
 
-    public AccountResponseDTO getAccountByUserId(Long userId) {
-        Account account = accountRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada para el usuario: " + userId));
-
-        return AccountResponseDTO.builder()
-                .id(account.getId())
-                .cvu(account.getCvu())
-                .alias(account.getAlias())
-                .userId(account.getUserId())
-                .build();
-    }
-
-    public AccountResponseDTO getAccountByCvu(String cvu) {
-        Account account = accountRepository.findByCvu(cvu)
-                .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada con CVU: " + cvu));
-
-        return AccountResponseDTO.builder()
-                .id(account.getId())
-                .cvu(account.getCvu())
-                .alias(account.getAlias())
-                .userId(account.getUserId())
-                .build();
+    private Account findAccountById(Long id) {
+        return accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Cuenta no encontrada con id: " + id));
     }
 
     private AccountResponseDTO toAccountResponseDTO(Account account) {
@@ -51,17 +35,6 @@ public class AccountService {
                 .userId(account.getUserId())
                 .balance(account.getBalance())
                 .build();
-    }
-
-    private Account findAccountById(Long id) {
-        return accountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Cuenta no encontrada con id: " + id));
-    }
-
-    public AccountResponseDTO getAccountById(Long id) {
-        Account account = findAccountById(id);
-        return toAccountResponseDTO(account);
     }
 
     private TransactionResponseDTO toTransactionResponseDTO(Transaction t) {
@@ -76,12 +49,34 @@ public class AccountService {
                 .build();
     }
 
+    public AccountResponseDTO getAccountByUserId(Long userId) {
+        Account account = accountRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Cuenta no encontrada para el usuario: " + userId));
+        return toAccountResponseDTO(account);
+    }
+
+    public AccountResponseDTO getAccountByCvu(String cvu) {
+        Account account = accountRepository.findByCvu(cvu)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Cuenta no encontrada con CVU: " + cvu));
+        return toAccountResponseDTO(account);
+    }
+
     public List<TransactionResponseDTO> getTransactionsByAccountId(Long id) {
-        findAccountById(id); // valida que la cuenta exista
+        findAccountById(id);
         return transactionRepository
                 .findByAccountIdOrderByCreatedAtDesc(id)
                 .stream()
                 .map(this::toTransactionResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    public AccountBalanceDTO getAccountBalance(Long id) {
+        Account account = findAccountById(id);
+        return AccountBalanceDTO.builder()
+                .id(account.getId())
+                .balance(account.getBalance())
+                .build();
     }
 }

@@ -1,5 +1,6 @@
 package com.digitalmoneyhouse.accountservice.controller;
 
+import com.digitalmoneyhouse.accountservice.dto.AccountBalanceDTO;
 import com.digitalmoneyhouse.accountservice.dto.AccountResponseDTO;
 import com.digitalmoneyhouse.accountservice.dto.TransactionResponseDTO;
 import com.digitalmoneyhouse.accountservice.service.AccountService;
@@ -30,8 +31,8 @@ public class AccountController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AccountResponseDTO> getAccountById(@PathVariable Long id) {
-        return ResponseEntity.ok(accountService.getAccountById(id));
+    public ResponseEntity<AccountBalanceDTO> getAccountById(@PathVariable Long id) {
+        return ResponseEntity.ok(accountService.getAccountBalance(id));
     }
 
     @GetMapping("/{id}/transactions")
