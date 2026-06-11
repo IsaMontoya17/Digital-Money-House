@@ -39,6 +39,9 @@ public class User {
     @Column(nullable = false)
     private String phone;
 
+    @Column(unique = true)
+    private String keycloakId;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",

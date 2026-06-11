@@ -3,6 +3,7 @@ package com.digitalmoneyhouse.accountservice.service;
 import com.digitalmoneyhouse.accountservice.dto.AccountBalanceDTO;
 import com.digitalmoneyhouse.accountservice.dto.AccountResponseDTO;
 import com.digitalmoneyhouse.accountservice.dto.TransactionResponseDTO;
+import com.digitalmoneyhouse.accountservice.exception.ForbiddenException;
 import com.digitalmoneyhouse.accountservice.exception.ResourceNotFoundException;
 import com.digitalmoneyhouse.accountservice.model.Account;
 import com.digitalmoneyhouse.accountservice.model.Transaction;
@@ -49,7 +50,7 @@ public class AccountService {
                 .build();
     }
 
-    public AccountResponseDTO getAccountByUserId(Long userId) {
+    public AccountResponseDTO getAccountByUserId(String userId) {
         Account account = accountRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Cuenta no encontrada para el usuario: " + userId));
@@ -63,20 +64,30 @@ public class AccountService {
         return toAccountResponseDTO(account);
     }
 
-    public List<TransactionResponseDTO> getTransactionsByAccountId(Long id) {
-        findAccountById(id);
+    public AccountBalanceDTO getAccountBalance(Long id, String requestingUserId) {
+        Account account = findAccountById(id);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para acceder a esta cuenta");
+        }
+
+        return AccountBalanceDTO.builder()
+                .id(account.getId())
+                .balance(account.getBalance())
+                .build();
+    }
+
+    public List<TransactionResponseDTO> getTransactionsByAccountId(Long id, String requestingUserId) {
+        Account account = findAccountById(id);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para acceder a esta cuenta");
+        }
+
         return transactionRepository
                 .findByAccountIdOrderByCreatedAtDesc(id)
                 .stream()
                 .map(this::toTransactionResponseDTO)
                 .collect(Collectors.toList());
-    }
-
-    public AccountBalanceDTO getAccountBalance(Long id) {
-        Account account = findAccountById(id);
-        return AccountBalanceDTO.builder()
-                .id(account.getId())
-                .balance(account.getBalance())
-                .build();
     }
 }

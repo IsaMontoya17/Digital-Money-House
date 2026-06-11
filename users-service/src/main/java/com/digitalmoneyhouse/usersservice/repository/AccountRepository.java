@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
-    Optional<Account> findByUser(User user);
+    Optional<Account> findByKeycloakId(String keycloakId);
     boolean existsByCvu(String cvu);
     boolean existsByAlias(String alias);
 }

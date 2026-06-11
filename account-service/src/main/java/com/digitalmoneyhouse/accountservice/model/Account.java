@@ -28,8 +28,8 @@ public class Account {
     @Column(nullable = false, unique = true)
     private String alias;
 
-    @Column(nullable = false)
-    private Long userId;
+    @Column(nullable = false, unique = true)
+    private String userId;
 
     @Column(nullable = false, precision = 15, scale = 2)
     @Builder.Default

@@ -1,6 +1,7 @@
 package com.digitalmoneyhouse.usersservice.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;import org.springframework.http.HttpHeaders;
@@ -10,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import java.util.Map;
-
 
 @Service
 @RequiredArgsConstructor
@@ -28,10 +28,11 @@ public class KeycloakService {
     @Value("${keycloak.admin.client-secret}")
     private String clientSecret;
 
-    public void createUser(String email, String password, String firstName, String lastName) {
-        String adminToken = getAdminToken();
+    public String createUser(String email, String password, String firstName, String lastName) {
+        try {
+            String adminToken = getAdminToken();
 
-        String userJson = String.format("""
+            String userJson = String.format("""
             {
                 "username": "%s",
                 "email": "%s",
@@ -47,15 +48,22 @@ public class KeycloakService {
             }
             """, email, email, firstName, lastName, password);
 
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(adminToken);
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
 
-        HttpEntity<String> entity = new HttpEntity<>(userJson, headers);
-        String url = serverUrl + "/admin/realms/" + realm + "/users";
+            HttpEntity<String> entity = new HttpEntity<>(userJson, headers);
+            String url = serverUrl + "/admin/realms/" + realm + "/users";
 
-        restTemplate.postForEntity(url, entity, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+
+            String location = response.getHeaders().getLocation().toString();
+            return location.substring(location.lastIndexOf("/") + 1);
+
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     private String getAdminToken() {

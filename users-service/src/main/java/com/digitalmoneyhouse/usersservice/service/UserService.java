@@ -10,6 +10,7 @@ import com.digitalmoneyhouse.usersservice.repository.AccountRepository;
 import com.digitalmoneyhouse.usersservice.repository.RoleRepository;
 import com.digitalmoneyhouse.usersservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -54,17 +55,20 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-        keycloakService.createUser(
+        String keycloakId = keycloakService.createUser(
                 request.getEmail(),
                 request.getPassword(),
                 request.getFirstName(),
                 request.getLastName()
         );
 
+        savedUser.setKeycloakId(keycloakId);
+        userRepository.save(savedUser);
+
         Account account = Account.builder()
                 .cvu(generateUniqueCvu())
                 .alias(generateUniqueAlias())
-                .user(savedUser)
+                .keycloakId(keycloakId)
                 .build();
 
         Account savedAccount = accountRepository.save(account);
