@@ -2,6 +2,9 @@ package com.digitalmoneyhouse.usersservice.service;
 
 import com.digitalmoneyhouse.usersservice.dto.RegisterRequestDTO;
 import com.digitalmoneyhouse.usersservice.dto.RegisterResponseDTO;
+import com.digitalmoneyhouse.usersservice.dto.UserProfileDTO;
+import com.digitalmoneyhouse.usersservice.exception.ForbiddenException;
+import com.digitalmoneyhouse.usersservice.exception.ResourceNotFoundException;
 import com.digitalmoneyhouse.usersservice.model.Account;
 import com.digitalmoneyhouse.usersservice.model.Role;
 import com.digitalmoneyhouse.usersservice.model.RoleName;
@@ -10,7 +13,6 @@ import com.digitalmoneyhouse.usersservice.repository.AccountRepository;
 import com.digitalmoneyhouse.usersservice.repository.RoleRepository;
 import com.digitalmoneyhouse.usersservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -120,5 +122,28 @@ public class UserService {
         return words[random.nextInt(words.length)] + "." +
                 words[random.nextInt(words.length)] + "." +
                 words[random.nextInt(words.length)];
+    }
+
+    public UserProfileDTO getUserById(Long id, String requestingKeycloakId) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+
+        if (!user.getKeycloakId().equals(requestingKeycloakId)) {
+            throw new ForbiddenException("No tienes permisos para ver este perfil");
+        }
+
+        Account account = accountRepository.findByKeycloakId(user.getKeycloakId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada para el usuario: " + id));
+
+        return UserProfileDTO.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .dni(user.getDni())
+                .phone(user.getPhone())
+                .cvu(account.getCvu())
+                .alias(account.getAlias())
+                .build();
     }
 }
