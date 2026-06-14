@@ -52,4 +52,12 @@ public class AccountController {
         CardResponseDTO response = accountService.addCardToAccount(id, requestingUserId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    @GetMapping("/{id}/cards")
+    public ResponseEntity<List<CardResponseDTO>> getCards(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") String requestingUserId) {
+
+        return ResponseEntity.ok(accountService.getCardsByAccountId(id, requestingUserId));
+    }
 }

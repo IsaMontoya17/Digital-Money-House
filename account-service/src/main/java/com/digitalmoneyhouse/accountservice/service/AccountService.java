@@ -122,4 +122,23 @@ public class AccountService {
                 .cardType(savedCard.getCardType())
                 .build();
     }
+
+    public List<CardResponseDTO> getCardsByAccountId(Long accountId, String requestingUserId) {
+        Account account = findAccountById(accountId);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para acceder a esta cuenta");
+        }
+
+        return cardRepository.findByAccountId(accountId)
+                .stream()
+                .map(card -> CardResponseDTO.builder()
+                        .id(card.getId())
+                        .cardNumber(card.getCardNumber())
+                        .cardHolderName(card.getCardHolderName())
+                        .expirationDate(card.getExpirationDate())
+                        .cardType(card.getCardType())
+                        .build())
+                .collect(Collectors.toList());
+    }
 }
