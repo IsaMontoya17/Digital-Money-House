@@ -24,12 +24,12 @@ public class Card {
     @Column(nullable = false)
     private String cardHolderName;
 
-    @Column(nullable = false, length = 7) // MM/YYYY
+    @Column(nullable = false, length = 7)
     private String expirationDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private CardType cardType; // DEBIT, CREDIT
+    private CardType cardType;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id", nullable = false)

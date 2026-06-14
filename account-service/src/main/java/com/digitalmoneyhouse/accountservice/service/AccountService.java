@@ -1,13 +1,14 @@
 package com.digitalmoneyhouse.accountservice.service;
 
-import com.digitalmoneyhouse.accountservice.dto.AccountBalanceDTO;
-import com.digitalmoneyhouse.accountservice.dto.AccountResponseDTO;
-import com.digitalmoneyhouse.accountservice.dto.TransactionResponseDTO;
+import com.digitalmoneyhouse.accountservice.dto.*;
+import com.digitalmoneyhouse.accountservice.exception.ConflictException;
 import com.digitalmoneyhouse.accountservice.exception.ForbiddenException;
 import com.digitalmoneyhouse.accountservice.exception.ResourceNotFoundException;
 import com.digitalmoneyhouse.accountservice.model.Account;
+import com.digitalmoneyhouse.accountservice.model.Card;
 import com.digitalmoneyhouse.accountservice.model.Transaction;
 import com.digitalmoneyhouse.accountservice.repository.AccountRepository;
+import com.digitalmoneyhouse.accountservice.repository.CardRepository;
 import com.digitalmoneyhouse.accountservice.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class AccountService {
 
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+    private final CardRepository cardRepository;
 
     private Account findAccountById(Long id) {
         return accountRepository.findById(id)
@@ -89,5 +91,35 @@ public class AccountService {
                 .stream()
                 .map(this::toTransactionResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    public CardResponseDTO addCardToAccount(Long accountId, String requestingUserId, CardRequestDTO request) {
+        Account account = findAccountById(accountId);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para modificar esta cuenta");
+        }
+
+        if (cardRepository.findByCardNumber(request.getCardNumber()).isPresent()) {
+            throw new ConflictException("La tarjeta ya está asociada a una cuenta");
+        }
+
+        Card card = Card.builder()
+                .cardNumber(request.getCardNumber())
+                .cardHolderName(request.getCardHolderName())
+                .expirationDate(request.getExpirationDate())
+                .cardType(request.getCardType())
+                .account(account)
+                .build();
+
+        Card savedCard = cardRepository.save(card);
+
+        return CardResponseDTO.builder()
+                .id(savedCard.getId())
+                .cardNumber(savedCard.getCardNumber())
+                .cardHolderName(savedCard.getCardHolderName())
+                .expirationDate(savedCard.getExpirationDate())
+                .cardType(savedCard.getCardType())
+                .build();
     }
 }

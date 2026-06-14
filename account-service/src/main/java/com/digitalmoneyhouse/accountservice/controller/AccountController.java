@@ -1,10 +1,10 @@
 package com.digitalmoneyhouse.accountservice.controller;
 
-import com.digitalmoneyhouse.accountservice.dto.AccountBalanceDTO;
-import com.digitalmoneyhouse.accountservice.dto.AccountResponseDTO;
-import com.digitalmoneyhouse.accountservice.dto.TransactionResponseDTO;
+import com.digitalmoneyhouse.accountservice.dto.*;
 import com.digitalmoneyhouse.accountservice.service.AccountService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,5 +41,15 @@ public class AccountController {
             @RequestHeader("X-User-Id") String requestingUserId) {
 
         return ResponseEntity.ok(accountService.getTransactionsByAccountId(id, requestingUserId));
+    }
+
+    @PostMapping("/{id}/cards")
+    public ResponseEntity<CardResponseDTO> addCard(
+            @PathVariable Long id,
+            @RequestHeader("X-User-Id") String requestingUserId,
+            @Valid @RequestBody CardRequestDTO request) {
+
+        CardResponseDTO response = accountService.addCardToAccount(id, requestingUserId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
