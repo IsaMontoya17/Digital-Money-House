@@ -60,4 +60,13 @@ public class AccountController {
 
         return ResponseEntity.ok(accountService.getCardsByAccountId(id, requestingUserId));
     }
+
+    @GetMapping("/{id}/cards/{cardId}")
+    public ResponseEntity<CardResponseDTO> getCardById(
+            @PathVariable Long id,
+            @PathVariable Long cardId,
+            @RequestHeader("X-User-Id") String requestingUserId) {
+
+        return ResponseEntity.ok(accountService.getCardDetail(id, cardId, requestingUserId));
+    }
 }

@@ -141,4 +141,27 @@ public class AccountService {
                         .build())
                 .collect(Collectors.toList());
     }
+
+    public CardResponseDTO getCardDetail(Long accountId, Long cardId, String requestingUserId) {
+        Account account = findAccountById(accountId);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para acceder a esta cuenta");
+        }
+
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tarjeta no encontrada con id: " + cardId));
+
+        if (!card.getAccount().getId().equals(accountId)) {
+            throw new ResourceNotFoundException("Tarjeta no encontrada con id: " + cardId);
+        }
+
+        return CardResponseDTO.builder()
+                .id(card.getId())
+                .cardNumber(card.getCardNumber())
+                .cardHolderName(card.getCardHolderName())
+                .expirationDate(card.getExpirationDate())
+                .cardType(card.getCardType())
+                .build();
+    }
 }
