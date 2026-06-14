@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,7 +29,9 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserProfileDTO> getUserById(
             @PathVariable Long id,
-            @RequestHeader("X-User-Id") String requestingKeycloakId) {
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingKeycloakId = jwt.getClaimAsString("sub");
         return ResponseEntity.ok(userService.getUserById(id, requestingKeycloakId));
     }
 }
