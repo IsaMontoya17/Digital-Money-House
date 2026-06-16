@@ -11,3 +11,8 @@
 
 # Logs
 **/*.log
+
+# Allure Testing Framework
+**/testing-automation/.allure/
+**/testing-automation/allure-results/
+**/testing-automation/allure-report/
