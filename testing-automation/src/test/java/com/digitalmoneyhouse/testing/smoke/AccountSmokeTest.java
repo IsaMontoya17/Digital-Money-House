@@ -4,15 +4,13 @@ import io.qameta.allure.*;
 import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-
 import static com.digitalmoneyhouse.testing.config.TestConfig.*;
 import static com.digitalmoneyhouse.testing.utils.AuthHelper.getValidToken;
+import static com.digitalmoneyhouse.testing.utils.DbHelper.seedStandardTransactionSet;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
@@ -48,61 +46,15 @@ public class AccountSmokeTest {
                 .body("balance", greaterThanOrEqualTo(0.0f));
     }
 
+    @BeforeEach
+    void seedTransactionData() {
+        seedStandardTransactionSet(TEST_ACCOUNT_ID);
+    }
+
     @Test
     @Severity(SeverityLevel.CRITICAL)
     @Description("TC-SM-006: Listado de transacciones de cuenta (GET /accounts/{id}/transactions)")
     void tcSm006_listarTransaccionesOrdenadas_devuelve200YArreglo() {
-        try (Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-
-            try (PreparedStatement deleteStmt = conn.prepareStatement("DELETE FROM transactions WHERE account_id = ?")) {
-                deleteStmt.setInt(1, Integer.parseInt(TEST_ACCOUNT_ID));
-                deleteStmt.executeUpdate();
-            }
-
-            String sqlInsert = "INSERT INTO transactions (id, account_id, amount, type, created_at, description, origin_cvu, dest_cvu) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement insertStmt = conn.prepareStatement(sqlInsert)) {
-
-                // Transacción 1
-                insertStmt.setInt(1, 101);
-                insertStmt.setInt(2, Integer.parseInt(TEST_ACCOUNT_ID));
-                insertStmt.setDouble(3, 1000.00);
-                insertStmt.setString(4, "INCOME");
-                insertStmt.setTimestamp(5, java.sql.Timestamp.valueOf("2026-06-16 02:32:44"));
-                insertStmt.setString(6, "Deposito de prueba");
-                insertStmt.setNull(7, java.sql.Types.VARCHAR);
-                insertStmt.setNull(8, java.sql.Types.VARCHAR);
-                insertStmt.addBatch();
-
-                // Transacción 2
-                insertStmt.setInt(1, 102);
-                insertStmt.setInt(2, Integer.parseInt(TEST_ACCOUNT_ID));
-                insertStmt.setDouble(3, 300.00);
-                insertStmt.setString(4, "TRANSFER_IN");
-                insertStmt.setTimestamp(5, java.sql.Timestamp.valueOf("2026-06-12 09:00:00"));
-                insertStmt.setString(6, "Transferencia recibida");
-                insertStmt.setString(7, "1234567890123456789012");
-                insertStmt.setString(8, "4907349814412647186490");
-                insertStmt.addBatch();
-
-                // Transacción 3
-                insertStmt.setInt(1, 103);
-                insertStmt.setInt(2, Integer.parseInt(TEST_ACCOUNT_ID));
-                insertStmt.setDouble(3, 200.00);
-                insertStmt.setString(4, "TRANSFER_OUT");
-                insertStmt.setTimestamp(5, java.sql.Timestamp.valueOf("2026-06-11 14:00:00"));
-                insertStmt.setString(6, "Transferencia enviada");
-                insertStmt.setString(7, "4907349814412647186490");
-                insertStmt.setString(8, "1234567890123456789012");
-                insertStmt.addBatch();
-
-                insertStmt.executeBatch();
-            }
-        } catch (java.sql.SQLException e) {
-            org.junit.jupiter.api.Assertions.fail("FALLÓ SQL. Estado: " + e.getSQLState() + " | Código: " + e.getErrorCode() + " | Mensaje: " + e.getMessage());
-        } catch (Exception e) {
-            org.junit.jupiter.api.Assertions.fail("FALLÓ CONEXIÓN U OTRO ERROR: " + e.getMessage());
-        }
-
         given()
                 .header("Authorization", "Bearer " + getValidToken())
                 .when()
