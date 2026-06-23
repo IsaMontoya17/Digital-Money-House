@@ -2,6 +2,7 @@ package com.digitalmoneyhouse.usersservice.service;
 
 import com.digitalmoneyhouse.usersservice.dto.RegisterRequestDTO;
 import com.digitalmoneyhouse.usersservice.dto.RegisterResponseDTO;
+import com.digitalmoneyhouse.usersservice.dto.UpdateUserRequestDTO;
 import com.digitalmoneyhouse.usersservice.dto.UserProfileDTO;
 import com.digitalmoneyhouse.usersservice.exception.ForbiddenException;
 import com.digitalmoneyhouse.usersservice.exception.ResourceNotFoundException;
@@ -131,6 +132,57 @@ public class UserService {
         if (!user.getKeycloakId().equals(requestingKeycloakId)) {
             throw new ForbiddenException("No tienes permisos para ver este perfil");
         }
+
+        Account account = accountRepository.findByKeycloakId(user.getKeycloakId())
+                .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada para el usuario: " + id));
+
+        return UserProfileDTO.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .dni(user.getDni())
+                .phone(user.getPhone())
+                .cvu(account.getCvu())
+                .alias(account.getAlias())
+                .build();
+    }
+
+    public UserProfileDTO updateUser(Long id, UpdateUserRequestDTO request, String requestingKeycloakId) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con id: " + id));
+
+        if (!user.getKeycloakId().equals(requestingKeycloakId)) {
+            throw new ForbiddenException("No tienes permisos para modificar este perfil");
+        }
+
+        if (request.getFirstName() != null) {
+            user.setFirstName(request.getFirstName());
+        }
+        if (request.getLastName() != null) {
+            user.setLastName(request.getLastName());
+        }
+        if (request.getEmail() != null) {
+            if (userRepository.existsByEmail(request.getEmail()) && !request.getEmail().equals(user.getEmail())) {
+                throw new IllegalArgumentException("El email ya está registrado");
+            }
+            user.setEmail(request.getEmail());
+        }
+        if (request.getDni() != null) {
+            if (userRepository.existsByDni(request.getDni()) && !request.getDni().equals(user.getDni())) {
+                throw new IllegalArgumentException("El DNI ya está registrado");
+            }
+            user.setDni(request.getDni());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        if (request.getPassword() != null) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            keycloakService.updateUserPassword(user.getKeycloakId(), request.getPassword());
+        }
+
+        userRepository.save(user);
 
         Account account = accountRepository.findByKeycloakId(user.getKeycloakId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cuenta no encontrada para el usuario: " + id));

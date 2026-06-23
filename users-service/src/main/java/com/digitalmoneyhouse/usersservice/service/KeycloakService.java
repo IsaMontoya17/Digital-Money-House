@@ -82,4 +82,31 @@ public class KeycloakService {
         ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, entity, Map.class);
         return (String) response.getBody().get("access_token");
     }
+
+    public void updateUserPassword(String keycloakId, String newPassword) {
+        try {
+            String adminToken = getAdminToken();
+
+            String credentialJson = String.format("""
+            {
+                "type": "password",
+                "value": "%s",
+                "temporary": false
+            }
+            """, newPassword);
+
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(adminToken);
+
+            HttpEntity<String> entity = new HttpEntity<>(credentialJson, headers);
+            String url = serverUrl + "/admin/realms/" + realm + "/users/" + keycloakId + "/reset-password";
+
+            restTemplate.put(url, entity);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al actualizar la contraseña en Keycloak", e);
+        }
+    }
 }

@@ -38,6 +38,16 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getAccountBalance(id, requestingUserId));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<AccountResponseDTO> updateAccount(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateAccountRequestDTO request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingUserId = jwt.getClaimAsString("sub");
+        return ResponseEntity.ok(accountService.updateAccount(id, request, requestingUserId));
+    }
+
     @GetMapping("/{id}/transactions")
     public ResponseEntity<List<TransactionResponseDTO>> getTransactionsByAccountId(
             @PathVariable Long id,

@@ -181,4 +181,22 @@ public class AccountService {
 
         cardRepository.delete(card);
     }
+
+    public AccountResponseDTO updateAccount(Long id, UpdateAccountRequestDTO request, String requestingUserId) {
+        Account account = findAccountById(id);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para modificar esta cuenta");
+        }
+
+        if (request.getAlias() != null) {
+            if (accountRepository.existsByAlias(request.getAlias()) && !request.getAlias().equals(account.getAlias())) {
+                throw new ConflictException("El alias ya está en uso");
+            }
+            account.setAlias(request.getAlias());
+        }
+
+        accountRepository.save(account);
+        return toAccountResponseDTO(account);
+    }
 }

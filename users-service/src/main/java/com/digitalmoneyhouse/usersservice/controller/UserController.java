@@ -2,6 +2,7 @@ package com.digitalmoneyhouse.usersservice.controller;
 
 import com.digitalmoneyhouse.usersservice.dto.RegisterRequestDTO;
 import com.digitalmoneyhouse.usersservice.dto.RegisterResponseDTO;
+import com.digitalmoneyhouse.usersservice.dto.UpdateUserRequestDTO;
 import com.digitalmoneyhouse.usersservice.dto.UserProfileDTO;
 import com.digitalmoneyhouse.usersservice.service.UserService;
 import jakarta.validation.Valid;
@@ -33,5 +34,16 @@ public class UserController {
 
         String requestingKeycloakId = jwt.getClaimAsString("sub");
         return ResponseEntity.ok(userService.getUserById(id, requestingKeycloakId));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<UserProfileDTO> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserRequestDTO request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingKeycloakId = jwt.getClaimAsString("sub");
+        UserProfileDTO updated = userService.updateUser(id, request, requestingKeycloakId);
+        return ResponseEntity.ok(updated);
     }
 }
