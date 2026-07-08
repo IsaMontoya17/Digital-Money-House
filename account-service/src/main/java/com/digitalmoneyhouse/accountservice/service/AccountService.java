@@ -199,4 +199,37 @@ public class AccountService {
         accountRepository.save(account);
         return toAccountResponseDTO(account);
     }
+
+    public List<TransactionResponseDTO> getActivityByAccountId(Long id, String requestingUserId) {
+        Account account = findAccountById(id);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para acceder a esta cuenta");
+        }
+
+        return transactionRepository
+                .findByAccountIdOrderByCreatedAtDesc(id)
+                .stream()
+                .map(this::toTransactionResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    public TransactionResponseDTO getActivityDetail(Long accountId, Long transactionId, String requestingUserId) {
+        Account account = findAccountById(accountId);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para acceder a esta cuenta");
+        }
+
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Transacción no encontrada con id: " + transactionId));
+
+        if (!transaction.getAccount().getId().equals(accountId)) {
+            throw new ResourceNotFoundException(
+                    "Transacción no encontrada con id: " + transactionId);
+        }
+
+        return toTransactionResponseDTO(transaction);
+    }
 }

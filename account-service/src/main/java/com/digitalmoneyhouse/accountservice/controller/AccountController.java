@@ -97,4 +97,23 @@ public class AccountController {
         accountService.deleteCard(id, cardId, requestingUserId);
         return ResponseEntity.ok("Tarjeta eliminada correctamente");
     }
+
+    @GetMapping("/{id}/activity")
+    public ResponseEntity<List<TransactionResponseDTO>> getActivityByAccountId(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingUserId = jwt.getClaimAsString("sub");
+        return ResponseEntity.ok(accountService.getActivityByAccountId(id, requestingUserId));
+    }
+
+    @GetMapping("/{id}/activity/{transactionId}")
+    public ResponseEntity<TransactionResponseDTO> getActivityDetail(
+            @PathVariable Long id,
+            @PathVariable Long transactionId,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingUserId = jwt.getClaimAsString("sub");
+        return ResponseEntity.ok(accountService.getActivityDetail(id, transactionId, requestingUserId));
+    }
 }
