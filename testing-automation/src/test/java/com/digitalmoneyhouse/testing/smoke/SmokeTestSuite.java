@@ -355,4 +355,57 @@ public class SmokeTestSuite {
                 .body("[2].amount", equalTo(200.00f))
                 .body("[2].type", equalTo("TRANSFER_OUT"));
     }
+
+    @Test
+    @Order(14)
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("TC-SM-014: Consulta de detalle de transacción (GET /accounts/{id}/activity/{transactionId})")
+    void tcSm014_consultarDetalleDeTransaccion_devuelve200ConDatos() {
+        seedStandardTransactionSet(testAccountId);
+
+        given()
+                .header("Authorization", "Bearer " + getValidToken())
+                .when()
+                .get("/accounts/" + testAccountId + "/activity/101")
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(101))
+                .body("amount", equalTo(1000.00f))
+                .body("type", equalTo("INCOME"))
+                .body("createdAt", notNullValue())
+                .body("description", equalTo("Deposito de prueba"));
+    }
+
+    @Test
+    @Order(15)
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("TC-SM-015: Ingreso de dinero desde tarjeta (POST /accounts/{id}/transferences)")
+    void tcSm015_ingresoDineroDeseTarjeta_devuelve201ConTransaccion() {
+        Integer cardId = given()
+                .header("Authorization", "Bearer " + getValidToken())
+                .when()
+                .get("/accounts/" + testAccountId + "/cards")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath()
+                .getInt("[0].id");
+
+        given()
+                .header("Authorization", "Bearer " + getValidToken())
+                .contentType("application/json")
+                .body(Map.of(
+                        "cardId", cardId,
+                        "amount", 500.00,
+                        "description", "Depósito de prueba smoke"
+                ))
+                .when()
+                .post("/accounts/" + testAccountId + "/transferences")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("amount", equalTo(500.00f))
+                .body("type", equalTo("INCOME"))
+                .body("description", equalTo("Depósito de prueba smoke"));
+    }
 }

@@ -7,6 +7,7 @@ import com.digitalmoneyhouse.accountservice.exception.ResourceNotFoundException;
 import com.digitalmoneyhouse.accountservice.model.Account;
 import com.digitalmoneyhouse.accountservice.model.Card;
 import com.digitalmoneyhouse.accountservice.model.Transaction;
+import com.digitalmoneyhouse.accountservice.model.TransactionType;
 import com.digitalmoneyhouse.accountservice.repository.AccountRepository;
 import com.digitalmoneyhouse.accountservice.repository.CardRepository;
 import com.digitalmoneyhouse.accountservice.repository.TransactionRepository;
@@ -231,5 +232,39 @@ public class AccountService {
         }
 
         return toTransactionResponseDTO(transaction);
+    }
+
+    public TransactionResponseDTO deposit(Long accountId, TransferenceRequestDTO request, String requestingUserId) {
+        Account account = findAccountById(accountId);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para operar en esta cuenta");
+        }
+
+        Card card = cardRepository.findById(request.getCardId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tarjeta no encontrada con id: " + request.getCardId()));
+
+        if (!card.getAccount().getId().equals(accountId)) {
+            throw new ForbiddenException("La tarjeta no pertenece a esta cuenta");
+        }
+
+        account.setBalance(account.getBalance().add(request.getAmount()));
+        accountRepository.save(account);
+
+        String description = request.getDescription() != null
+                ? request.getDescription()
+                : "Depósito desde tarjeta terminada en " +
+                card.getCardNumber().substring(card.getCardNumber().length() - 4);
+
+        Transaction transaction = Transaction.builder()
+                .account(account)
+                .amount(request.getAmount())
+                .type(TransactionType.INCOME)
+                .description(description)
+                .build();
+
+        Transaction saved = transactionRepository.save(transaction);
+        return toTransactionResponseDTO(saved);
     }
 }

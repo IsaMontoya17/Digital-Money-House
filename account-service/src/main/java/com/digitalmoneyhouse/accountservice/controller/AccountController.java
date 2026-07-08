@@ -116,4 +116,15 @@ public class AccountController {
         String requestingUserId = jwt.getClaimAsString("sub");
         return ResponseEntity.ok(accountService.getActivityDetail(id, transactionId, requestingUserId));
     }
+
+    @PostMapping("/{id}/transferences")
+    public ResponseEntity<TransactionResponseDTO> deposit(
+            @PathVariable Long id,
+            @Valid @RequestBody TransferenceRequestDTO request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingUserId = jwt.getClaimAsString("sub");
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(accountService.deposit(id, request, requestingUserId));
+    }
 }
