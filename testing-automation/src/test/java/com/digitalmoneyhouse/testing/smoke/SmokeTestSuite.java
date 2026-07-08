@@ -363,7 +363,7 @@ public class SmokeTestSuite {
     void tcSm014_consultarDetalleDeTransaccion_devuelve200ConDatos() {
         seedStandardTransactionSet(testAccountId);
 
-        given()
+        given(requestSpec)
                 .header("Authorization", "Bearer " + getValidToken())
                 .when()
                 .get("/accounts/" + testAccountId + "/activity/101")
@@ -381,7 +381,7 @@ public class SmokeTestSuite {
     @Severity(SeverityLevel.CRITICAL)
     @Description("TC-SM-015: Ingreso de dinero desde tarjeta (POST /accounts/{id}/transferences)")
     void tcSm015_ingresoDineroDeseTarjeta_devuelve201ConTransaccion() {
-        Integer cardId = given()
+        Integer cardId = given(requestSpec)
                 .header("Authorization", "Bearer " + getValidToken())
                 .when()
                 .get("/accounts/" + testAccountId + "/cards")
@@ -391,7 +391,7 @@ public class SmokeTestSuite {
                 .jsonPath()
                 .getInt("[0].id");
 
-        given()
+        given(requestSpec)
                 .header("Authorization", "Bearer " + getValidToken())
                 .contentType("application/json")
                 .body(Map.of(
