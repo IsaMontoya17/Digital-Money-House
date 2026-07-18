@@ -127,4 +127,24 @@ public class AccountController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(accountService.deposit(id, request, requestingUserId));
     }
+
+    @GetMapping("/{id}/transfers")
+    public ResponseEntity<List<TransferRecipientDTO>> getLastRecipients(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingUserId = jwt.getClaimAsString("sub");
+        return ResponseEntity.ok(accountService.getLastRecipients(id, requestingUserId));
+    }
+
+    @PostMapping("/{id}/transfers")
+    public ResponseEntity<TransactionResponseDTO> transfer(
+            @PathVariable Long id,
+            @Valid @RequestBody TransferRequestDTO request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingUserId = jwt.getClaimAsString("sub");
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(accountService.transfer(id, request, requestingUserId));
+    }
 }

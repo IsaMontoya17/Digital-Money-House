@@ -1,9 +1,7 @@
 package com.digitalmoneyhouse.accountservice.service;
 
 import com.digitalmoneyhouse.accountservice.dto.*;
-import com.digitalmoneyhouse.accountservice.exception.ConflictException;
-import com.digitalmoneyhouse.accountservice.exception.ForbiddenException;
-import com.digitalmoneyhouse.accountservice.exception.ResourceNotFoundException;
+import com.digitalmoneyhouse.accountservice.exception.*;
 import com.digitalmoneyhouse.accountservice.model.Account;
 import com.digitalmoneyhouse.accountservice.model.Card;
 import com.digitalmoneyhouse.accountservice.model.Transaction;
@@ -11,10 +9,13 @@ import com.digitalmoneyhouse.accountservice.model.TransactionType;
 import com.digitalmoneyhouse.accountservice.repository.AccountRepository;
 import com.digitalmoneyhouse.accountservice.repository.CardRepository;
 import com.digitalmoneyhouse.accountservice.repository.TransactionRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -266,5 +267,90 @@ public class AccountService {
 
         Transaction saved = transactionRepository.save(transaction);
         return toTransactionResponseDTO(saved);
+    }
+
+    private static final int MAX_RECENT_RECIPIENTS = 5;
+
+    public List<TransferRecipientDTO> getLastRecipients(Long id, String requestingUserId) {
+        Account account = findAccountById(id);
+
+        if (!account.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para acceder a esta cuenta");
+        }
+
+        List<Transaction> outgoingTransfers = transactionRepository
+                .findByAccountIdAndTypeOrderByCreatedAtDesc(id, TransactionType.TRANSFER_OUT);
+
+        Map<String, Transaction> latestByRecipient = new LinkedHashMap<>();
+        for (Transaction t : outgoingTransfers) {
+            latestByRecipient.putIfAbsent(t.getDestCvu(), t);
+        }
+
+        return latestByRecipient.values().stream()
+                .limit(MAX_RECENT_RECIPIENTS)
+                .map(t -> {
+                    String alias = accountRepository.findByCvu(t.getDestCvu())
+                            .map(Account::getAlias)
+                            .orElse(null);
+
+                    return TransferRecipientDTO.builder()
+                            .cvu(t.getDestCvu())
+                            .alias(alias)
+                            .lastTransferAt(t.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public TransactionResponseDTO transfer(Long id, TransferRequestDTO request, String requestingUserId) {
+        Account origin = findAccountById(id);
+
+        if (!origin.getUserId().equals(requestingUserId)) {
+            throw new ForbiddenException("No tienes permisos para operar en esta cuenta");
+        }
+
+        Account destination = accountRepository.findByCvu(request.getDestination())
+                .or(() -> accountRepository.findByAlias(request.getDestination()))
+                .orElseThrow(() -> new ValidationException("La cuenta destino no existe"));
+
+        if (destination.getId().equals(origin.getId())) {
+            throw new ValidationException("No puedes transferirte dinero a vos mismo");
+        }
+
+        if (origin.getBalance().compareTo(request.getAmount()) < 0) {
+            throw new InsufficientFundsException("Fondos insuficientes para realizar la transferencia");
+        }
+
+        origin.setBalance(origin.getBalance().subtract(request.getAmount()));
+        destination.setBalance(destination.getBalance().add(request.getAmount()));
+        accountRepository.save(origin);
+        accountRepository.save(destination);
+
+        String description = request.getDescription() != null
+                ? request.getDescription()
+                : "Transferencia a " + destination.getAlias();
+
+        Transaction outTransaction = Transaction.builder()
+                .account(origin)
+                .amount(request.getAmount())
+                .type(TransactionType.TRANSFER_OUT)
+                .description(description)
+                .originCvu(origin.getCvu())
+                .destCvu(destination.getCvu())
+                .build();
+        transactionRepository.save(outTransaction);
+
+        Transaction inTransaction = Transaction.builder()
+                .account(destination)
+                .amount(request.getAmount())
+                .type(TransactionType.TRANSFER_IN)
+                .description("Transferencia recibida de " + origin.getAlias())
+                .originCvu(origin.getCvu())
+                .destCvu(destination.getCvu())
+                .build();
+        transactionRepository.save(inTransaction);
+
+        return toTransactionResponseDTO(outTransaction);
     }
 }
