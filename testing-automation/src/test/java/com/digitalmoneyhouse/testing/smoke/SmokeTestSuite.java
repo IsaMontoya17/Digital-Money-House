@@ -27,6 +27,8 @@ public class SmokeTestSuite {
     private static String testUserId;
     private static String testAccountId;
     private static String testKeycloakId;
+    private static String testDestinationCvu;
+    private static String testDestinationAlias;
 
     private static RequestSpecification requestSpec;
 
@@ -36,6 +38,7 @@ public class SmokeTestSuite {
 
         registerTestUser();
         resolveTestIds();
+        resolveDestinationAccount();
 
         requestSpec = new RequestSpecBuilder()
                 .addFilter(new AllureRestAssured())
@@ -83,6 +86,46 @@ public class SmokeTestSuite {
 
         testAccountId = accountResponse.jsonPath().getString("id");
         testUserId = getUserIdFromAccount(testAccountId);
+    }
+
+    private static void resolveDestinationAccount() {
+        long timestamp = System.currentTimeMillis();
+        String destinationEmail = "destino" + timestamp + "@test.com";
+        String destinationDni = String.valueOf(timestamp).substring(4);
+
+        given()
+                .contentType("application/json")
+                .body(Map.of(
+                        "firstName", "Destino",
+                        "lastName", "Test",
+                        "dni", destinationDni,
+                        "email", destinationEmail,
+                        "phone", "3009876543",
+                        "password", TEST_PASSWORD
+                ))
+                .when()
+                .post("/users/register")
+                .then()
+                .statusCode(201);
+
+        Response loginResponse = given()
+                .contentType("application/json")
+                .body(Map.of("email", destinationEmail, "password", TEST_PASSWORD))
+                .when()
+                .post("/auth/login");
+
+        String destinationToken = loginResponse.jsonPath().getString("accessToken");
+        String[] parts = destinationToken.split("\\.");
+        String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+        String destinationKeycloakId = payload.split("\"sub\":\"")[1].split("\"")[0];
+
+        Response accountResponse = given()
+                .header("Authorization", "Bearer " + getValidToken())
+                .when()
+                .get("/accounts/user/" + destinationKeycloakId);
+
+        testDestinationCvu = accountResponse.jsonPath().getString("cvu");
+        testDestinationAlias = accountResponse.jsonPath().getString("alias");
     }
 
     private static String getUserIdFromAccount(String accountId) {
@@ -407,5 +450,101 @@ public class SmokeTestSuite {
                 .body("amount", equalTo(500.00f))
                 .body("type", equalTo("INCOME"))
                 .body("description", equalTo("Depósito de prueba smoke"));
+    }
+
+    @Test
+    @Order(16)
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("TC-SM-016: Transferencia exitosa a otra cuenta (POST /accounts/{id}/transfers)")
+    void tcSm016_transferenciaExitosa_devuelve201ConTransaccion() {
+        Integer cardId = given(requestSpec)
+                .header("Authorization", "Bearer " + getValidToken())
+                .when()
+                .get("/accounts/" + testAccountId + "/cards")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath()
+                .getInt("[0].id");
+
+        given(requestSpec)
+                .header("Authorization", "Bearer " + getValidToken())
+                .contentType("application/json")
+                .body(Map.of("cardId", cardId, "amount", 10000.00))
+                .when()
+                .post("/accounts/" + testAccountId + "/transferences")
+                .then()
+                .statusCode(201);
+
+        given(requestSpec)
+                .header("Authorization", "Bearer " + getValidToken())
+                .contentType("application/json")
+                .body(Map.of(
+                        "destination", testDestinationAlias,
+                        "amount", 200.00,
+                        "description", "Transferencia de prueba smoke"
+                ))
+                .when()
+                .post("/accounts/" + testAccountId + "/transfers")
+                .then()
+                .statusCode(201)
+                .body("id", notNullValue())
+                .body("amount", equalTo(200.00f))
+                .body("type", equalTo("TRANSFER_OUT"))
+                .body("destCvu", equalTo(testDestinationCvu))
+                .body("description", equalTo("Transferencia de prueba smoke"));
+    }
+
+    @Test
+    @Order(17)
+    @Severity(SeverityLevel.NORMAL)
+    @Description("TC-SM-017: Últimos destinatarios incluye la transferencia reciente (GET /accounts/{id}/transfers)")
+    void tcSm017_consultarUltimosDestinatarios_incluyeTransferenciaReciente() {
+        given(requestSpec)
+                .header("Authorization", "Bearer " + getValidToken())
+                .when()
+                .get("/accounts/" + testAccountId + "/transfers")
+                .then()
+                .statusCode(200)
+                .body("$", isA(java.util.List.class))
+                .body("[0].cvu", equalTo(testDestinationCvu))
+                .body("[0].alias", equalTo(testDestinationAlias))
+                .body("[0].lastTransferAt", notNullValue());
+    }
+
+    @Test
+    @Order(18)
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("TC-SM-018: Transferencia con fondos insuficientes (POST /accounts/{id}/transfers)")
+    void tcSm018_transferenciaFondosInsuficientes_devuelve410() {
+        given(requestSpec)
+                .header("Authorization", "Bearer " + getValidToken())
+                .contentType("application/json")
+                .body(Map.of(
+                        "destination", testDestinationAlias,
+                        "amount", 999999999.00
+                ))
+                .when()
+                .post("/accounts/" + testAccountId + "/transfers")
+                .then()
+                .statusCode(410);
+    }
+
+    @Test
+    @Order(19)
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("TC-SM-019: Transferencia a destino inexistente (POST /accounts/{id}/transfers)")
+    void tcSm019_transferenciaDestinoInexistente_devuelve400() {
+        given(requestSpec)
+                .header("Authorization", "Bearer " + getValidToken())
+                .contentType("application/json")
+                .body(Map.of(
+                        "destination", "no.existe.alias",
+                        "amount", 50.00
+                ))
+                .when()
+                .post("/accounts/" + testAccountId + "/transfers")
+                .then()
+                .statusCode(400);
     }
 }
