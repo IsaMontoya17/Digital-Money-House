@@ -17,14 +17,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
 public class AccountService {
 
+    private static final Logger transactionLog = LoggerFactory.getLogger("AUDIT_TRANSACTIONS");
+
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final CardRepository cardRepository;
+
+    private static final int MAX_RECENT_RECIPIENTS = 5;
 
     private Account findAccountById(Long id) {
         return accountRepository.findById(id)
@@ -266,10 +272,12 @@ public class AccountService {
                 .build();
 
         Transaction saved = transactionRepository.save(transaction);
+
+        transactionLog.info("DEPOSIT accountId={} amount={} cardId={} transactionId={}",
+                accountId, request.getAmount(), request.getCardId(), saved.getId());
+
         return toTransactionResponseDTO(saved);
     }
-
-    private static final int MAX_RECENT_RECIPIENTS = 5;
 
     public List<TransferRecipientDTO> getLastRecipients(Long id, String requestingUserId) {
         Account account = findAccountById(id);
@@ -319,6 +327,8 @@ public class AccountService {
         }
 
         if (origin.getBalance().compareTo(request.getAmount()) < 0) {
+            transactionLog.warn("TRANSFER_REJECTED reason=insufficient_funds accountId={} requestedAmount={} availableBalance={}",
+                    origin.getId(), request.getAmount(), origin.getBalance());
             throw new InsufficientFundsException("Fondos insuficientes para realizar la transferencia");
         }
 
@@ -350,6 +360,9 @@ public class AccountService {
                 .destCvu(destination.getCvu())
                 .build();
         transactionRepository.save(inTransaction);
+
+        transactionLog.info("TRANSFER originAccountId={} destAccountId={} amount={} outTransactionId={} inTransactionId={}",
+                origin.getId(), destination.getId(), request.getAmount(), outTransaction.getId(), inTransaction.getId());
 
         return toTransactionResponseDTO(outTransaction);
     }

@@ -9,8 +9,11 @@
 **/*.iml
 **/.vscode/
 
-# Logs
+# Logs & Audit files
+*.log
 **/*.log
+logs/
+**/logs/
 
 # Allure Testing Framework
 **/testing-automation/.allure/
