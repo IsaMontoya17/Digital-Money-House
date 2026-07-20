@@ -2,6 +2,7 @@ package com.digitalmoneyhouse.accountservice.controller;
 
 import com.digitalmoneyhouse.accountservice.dto.*;
 import com.digitalmoneyhouse.accountservice.service.AccountService;
+import com.digitalmoneyhouse.accountservice.service.PdfService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import com.digitalmoneyhouse.accountservice.dto.TransactionResponseDTO;
+
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.io.ByteArrayInputStream;
 
 import java.util.List;
 
@@ -18,6 +28,7 @@ import java.util.List;
 public class AccountController {
 
     private final AccountService accountService;
+    private final PdfService pdfService;
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<AccountResponseDTO> getAccountByUserId(@PathVariable String userId) {
@@ -146,5 +157,25 @@ public class AccountController {
         String requestingUserId = jwt.getClaimAsString("sub");
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(accountService.transfer(id, request, requestingUserId));
+    }
+
+    @GetMapping("/{id}/activity/{transactionId}/download")
+    public ResponseEntity<InputStreamResource> downloadReceipt(
+            @PathVariable Long id,
+            @PathVariable Long transactionId,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String requestingUserId = jwt.getSubject();
+        TransactionResponseDTO transaction = accountService.getActivityDetail(id, transactionId, requestingUserId);
+
+        ByteArrayInputStream pdf = pdfService.generateTransactionReceiptPdf(transaction);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "attachment; filename=comprobante_transaccion_" + transactionId + ".pdf");
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new InputStreamResource(pdf));
     }
 }

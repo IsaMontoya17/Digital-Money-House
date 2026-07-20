@@ -547,4 +547,35 @@ public class SmokeTestSuite {
                 .then()
                 .statusCode(400);
     }
+
+    @Test
+    @Order(20)
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("TC-SM-020: Descarga de comprobante de transacción en formato PDF (GET /accounts/{id}/activity/{transactionId}/download)")
+    void tcSm020_descargarComprobantePdf_devuelve200YArchivoPdf() {
+        seedStandardTransactionSet(testAccountId);
+
+        Long transactionId = given(requestSpec)
+                .header("Authorization", "Bearer " + getValidToken())
+                .when()
+                .get("/accounts/" + testAccountId + "/activity")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath()
+                .getLong("[0].id");
+
+        byte[] pdfBytes = given(requestSpec)
+                .header("Authorization", "Bearer " + getValidToken())
+                .when()
+                .get("/accounts/" + testAccountId + "/activity/" + transactionId + "/download")
+                .then()
+                .statusCode(200)
+                .contentType("application/pdf")
+                .header("Content-Disposition", containsString("attachment; filename=comprobante_transaccion_" + transactionId + ".pdf"))
+                .extract()
+                .asByteArray();
+
+        Assertions.assertTrue(pdfBytes.length > 0, "El archivo PDF generado no debe estar vacío");
+    }
 }
